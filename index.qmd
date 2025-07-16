@@ -1,6 +1,6 @@
 ---
 title: "Analisis de datos_ucv"
-author: "Yuma_Nikki_Yessica"
+author: "Castro, Andreina; Caballero, Yuleycy; Rodas, Yessica"
 date: last-modified     # se actualiza al compilar
 lang: es
 execute:
@@ -41,41 +41,43 @@ knitr::opts_knit$set(
 
 lapply(c("tidyverse","readxl","writexl","skimr","kableExtra","mice","miceadds","naniar","modelsummary",
   "haven",  "janitor",  "labelled",  "estimatr",  "MASS",  "pscl",  "psych",  "mirt",  "sandwich",
-  "lmtest"), library, character.only = TRUE)
+  "lmtest", "janitor", "kableExtra", "ordinal", "purrr", "gt", "broom", "glue"), library, character.only = TRUE)
 ```
 
 # Bases de datos
 
-```{r}
-andreina <- read_excel("E:\\Bases de datos\\ucv_datasets\\andreina_dataset.xlsx")
-yuma <-  read_excel("E:\\Bases de datos\\ucv_datasets\\yuma_dataset.xlsx")|> rename_with(tolower)
-yessica <- read_excel("E:\\Bases de datos\\ucv_datasets\\yessica_dataset.xlsx")
+En esta sección se importan las bases de datos que serán sometidas al análisis de datos
 
+```{r}
+andreina <- read_excel("E:\\Bases de datos\\ucv_datasets\\andreina_dataset.xlsx")|> rename_with(tolower)
+yuma <-  read_excel("E:\\Bases de datos\\ucv_datasets\\yuma_dataset.xlsx")|> rename_with(tolower)
+yessica <- read_excel("E:\\Bases de datos\\ucv_datasets\\yessica_dataset.xlsx")|> rename_with(tolower)
 ```
+
 
 # Análisis de resultados: Andreina Castro
 
-
 ### Transformación de datos
 
+El primer paso del código consiste en transformar las respuestas individuales de cada participante en un índice único mediante el cálculo del promedio aritmético. Para ello se suman las puntuaciones de un conjunto de ítems (por ejemplo, todas las preguntas relacionadas con las condiciones de trabajo) y se dividen entre el número de ítems respondidos por cada caso, descartando valores faltantes. De este modo, obtenemos un valor continuo que refleja de manera sintética la percepción global de cada dimensión, lo que simplifica el análisis al reducir múltiples variables a un solo indicador cuantitativo.
+
+Una vez obtenidos estos índices continuos, el siguiente cálculo fundamental es la determinación de los puntos de corte que segmentan la distribución en tres tramos iguales o “terciles”. Esto se consigue mediante la función de cuantiles, que identifica los valores de la variable a los percentiles 33,3 % y 66,7 %. Al tomar como referencia estos percentiles, la muestra queda dividida en tres grupos de tamaño aproximado equivalente, garantizando que cada categoría contenga un tercio de las observaciones. La razón principal para optar por terciles radica en el equilibrio que ofrecen entre simplicidad y capacidad de matizar. Una clasificación dicotómica (por encima o por debajo de la mediana) brinda muy poca diferenciación, mientras que pasar a cuatro o cinco categorías puede dificultar la comunicación de los resultados. Los terciles proporcionan tres niveles claros—por ejemplo, “malo”, “regular” y “bueno”—que mantienen la homogeneidad de grupo y facilitan la comparación entre categorías, tanto para audiencias técnicas como para decisores y públicos generales.
+
+Finalmente, con los puntos de corte definidos, cada valor continuo se transforma en una variable categórica ordinal mediante la función cut(). Esta operación asigna a cada observación la etiqueta correspondiente según el tramo en el que se ubique su índice. El resultado es un factor ordenado de tres niveles que puede emplearse directamente en tablas de frecuencia, análisis de asociación o representaciones gráficas, permitiendo comunicar de forma clara y estructurada los patrones de percepción y desempeño de la muestra.
 
 
 ```{r}
-# Cargar librerías necesarias
-library(tidyverse)
-library(janitor)
-library(knitr)
-library(kableExtra)
 
-
-# Definir los ítems para cada variable y dimensión
 items_cond_trabajo_total <- c("p1", "p2", "p5", "p6", "p7", "p8", "p9", "p11", "p12", 
                               "p14", "p15", "p16", "p17", "p18", "p19", "p20")
 items_cond_individuales <- c("p1", "p2", "p5", "p6", "p7")
 items_cond_intralab <- c("p8", "p9", "p11", "p12", "p14")
 items_cond_extralab <- c("p15", "p16", "p17", "p18", "p19", "p20")
 items_desempeno_laboral_total <- paste0("i", 1:20)
+```
 
+
+```{r}
 # Crear el dataframe para el análisis
 datos_analisis <- andreina %>%
   # Calcular promedios de todas las variables y dimensiones
@@ -126,13 +128,14 @@ datos_analisis <- andreina %>%
   )
 ```
 
+# Exploración bivariada
 
-# Tabla 1
+## Tabla 1: Condiciones de trabajo vs Desempeño laboral
 
-Al explorar la relación entre las Condiciones de Trabajo Generales y el rendimiento, se revela una fuerte y directa asociación positiva. Específicamente, de los 69 trabajadores que perciben sus condiciones como malas, una clara mayoría del 66.7% presenta un desempeño bajo, mientras que solo un 13.0% logra un desempeño alto. Para el grupo intermedio con condiciones regulares, el desempeño se concentra en los niveles bajo y medio, siendo notable que ningún trabajador en esta categoría alcanzó un desempeño alto. En marcado contraste, entre los 39 trabajadores que gozan de buenas condiciones, una abrumadora mayoría del 79.5% demuestra un desempeño alto, sin que ninguno de ellos registre un desempeño bajo, lo que confirma que la calidad de las condiciones generales es un potente predictor del desempeño.
+Al explorar la relación entre las Condiciones de Trabajo Generales y el desempeño laboral, se revela una fuerte y directa asociación positiva. Específicamente, de los 69 trabajadores que perciben sus condiciones como malas, una clara mayoría del 66.7% presenta un desempeño bajo, mientras que solo un 13.0% logra un desempeño alto. Para el grupo intermedio con condiciones regulares, el desempeño se concentra en los niveles bajo y medio, siendo notable que ningún trabajador en esta categoría alcanzó un desempeño alto. En marcado contraste, entre los 39 trabajadores que gozan de buenas condiciones, una abrumadora mayoría del 79.5% demuestra un desempeño alto, sin que ninguno de ellos registre un desempeño bajo, lo que confirma que la calidad de las condiciones generales es un potente predictor del desempeño.
 
 ```{r}
-# Hipótesis 1: Condiciones de Trabajo Generales vs. Desempeño General
+# Análisis exploratorio: Condiciones de trabajo Generales vs. Desempeño General
 datos_analisis %>%
   janitor::tabyl(nivel_condiciones_total, nivel_desempeno_total) %>%
   janitor::adorn_totals(where = c("row", "col")) %>%
@@ -141,7 +144,7 @@ datos_analisis %>%
   janitor::adorn_ns(position = "front") %>%
   dplyr::rename(`Condiciones de Trabajo` = nivel_condiciones_total) %>%
   knitr::kable(
-    caption = "Tabla Cruzada: Desempeño Laboral General según Condiciones de Trabajo Generales",
+    caption = "Tabla 1: Desempeño Laboral (constructo) según Condiciones de Trabajo (constructo)",
     escape = FALSE
   ) %>%
   kableExtra::kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE) %>%
@@ -149,11 +152,9 @@ datos_analisis %>%
 ```
 
 
+## Tabla 2: Condiciones individuales vs desempeño laboral
 
-# Tabla 2
-
-El análisis de las Condiciones Individuales presenta la asociación más pronunciada de todas, sugiriéndolas como un predictor clave del desempeño. Cerca del 60% (59.7%) de los trabajadores con condiciones individuales malas muestra un desempeño bajo. En el pequeño grupo con condiciones regulares, el desempeño se reparte entre los niveles bajo y medio, sin que nadie alcance un rendimiento alto. El resultado más revelador se encuentra en el grupo con buenas condiciones individuales, donde un impresionante 88.6% de los empleados logra un desempeño alto, siendo este el porcentaje más elevado de todas las mediciones. Esto sugiere que las características y el estado personal del individuo son el factor con la influencia más determinante en el logro de un desempeño laboral superior.
-
+El análisis de las condiciones individuales presenta la asociación más pronunciada de todas, sugiriéndolas como un predictor clave del desempeño. Cerca del 60% (59.7%) de los trabajadores con condiciones individuales malas muestra un desempeño bajo. En el pequeño grupo con condiciones regulares, el desempeño se reparte entre los niveles bajo y medio, sin que nadie alcance un rendimiento alto. El resultado más revelador se encuentra en el grupo con buenas condiciones individuales, donde un impresionante 88.6% de los empleados logra un desempeño alto, siendo este el porcentaje más elevado de todas las mediciones. Esto sugiere que las características y el estado personal del individuo son el factor con la influencia más determinante en el logro de un desempeño laboral superior.
 
 ```{r}
 # Hipótesis 2: Condiciones Individuales vs. Desempeño General
@@ -165,7 +166,7 @@ datos_analisis %>%
   janitor::adorn_ns(position = "front") %>%
   dplyr::rename(`Condiciones Individuales` = nivel_cond_individuales) %>%
   knitr::kable(
-    caption = "Tabla Cruzada: Desempeño Laboral General según Condiciones de Trabajo Individuales",
+    caption = "Tabla 2: Desempeño Laboral según condiciones de trabajo individuales (dimensión 1)",
     escape = FALSE
   ) %>%
   kableExtra::kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE) %>%
@@ -173,9 +174,9 @@ datos_analisis %>%
 ```
 
 
-# Tabla 3
+## Tabla 3: Condiciones intralaborales vs desempeño laboral
 
-El análisis de las Condiciones Intralaborales, enfocado en factores dentro del entorno de trabajo, muestra una relación igualmente robusta. Para los 66 empleados con malas condiciones, el 65.2% evidencia un desempeño bajo. Por su parte, los 14 trabajadores con condiciones regulares se dividen equitativamente entre un desempeño bajo y medio, y es significativo que, una vez más, ninguno alcanzó un nivel alto. El patrón se consolida de manera positiva en el grupo con buenas condiciones, donde el 79.5% de los 39 individuos exhibe un desempeño alto. Estos resultados sugieren que los factores inherentes al puesto y al ambiente laboral impactan de forma directa en la eficacia de los empleados.
+El análisis de las condiciones intralaborales, enfocado en factores dentro del entorno de trabajo, muestra una relación igualmente robusta. Para los 66 empleados con malas condiciones, el 65.2% evidencia un desempeño bajo. Por su parte, los 14 trabajadores con condiciones regulares se dividen equitativamente entre un desempeño bajo y medio, y es significativo que, una vez más, ninguno alcanzó un nivel alto. El patrón se consolida de manera positiva en el grupo con buenas condiciones, donde el 79.5% de los 39 individuos exhibe un desempeño alto. Estos resultados sugieren que los factores inherentes al puesto y al ambiente laboral impactan de forma directa en la eficacia de los empleados.
 
 ```{r}
 
@@ -188,20 +189,20 @@ datos_analisis %>%
   janitor::adorn_ns(position = "front") %>%
   dplyr::rename(`Condiciones Intralaborales` = nivel_cond_intralaborales) %>%
   knitr::kable(
-    caption = "Tabla Cruzada: Desempeño Laboral General según Condiciones de Trabajo Intralaborales",
+    caption = "Tabla 3: Desempeño laboral (constructo) según condiciones de trabajo intralaborales (Dimensión 2)",
     escape = FALSE
   ) %>%
   kableExtra::kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE) %>%
   kableExtra::add_header_above(c(" " = 1, "Desempeño Laboral" = 3, " " = 1))
 ```
 
+## Tabla 4: Condiciones extralaborales vs desempeño laboral
 
-# Tabla 4
-
-Al examinar las Condiciones Extralaborales, se observa que los factores externos al trabajo también guardan una correlación importante con el rendimiento. La tendencia es muy similar a las tablas anteriores. De los 69 trabajadores que enfrentan condiciones extralaborales desfavorables, el 62.3% registra un desempeño bajo. De manera consistente, en el grupo con condiciones regulares, el desempeño es mayoritariamente bajo (63.6%) y ninguno de sus miembros alcanza un nivel alto. La tendencia se invierte drásticamente para los 39 trabajadores con buenas condiciones extralaborales, ya que un 79.5% de ellos logra un desempeño alto, lo que indica que el bienestar del trabajador fuera de la oficina está fuertemente asociado con su rendimiento laboral.
+Al examinar las condiciones extralaborales, se observa que los factores externos al trabajo también guardan una correlación importante con el rendimiento. La tendencia es muy similar a las tablas anteriores. De los 69 trabajadores que enfrentan condiciones extralaborales desfavorables, el 62.3% registra un desempeño bajo. De manera consistente, en el grupo con condiciones regulares, el desempeño es mayoritariamente bajo (63.6%) y ninguno de sus miembros alcanza un nivel alto. La tendencia se invierte drásticamente para los 39 trabajadores con buenas condiciones extralaborales, ya que un 79.5% de ellos logra un desempeño alto, lo que indica que el bienestar del trabajador fuera de la oficina está fuertemente asociado con su rendimiento laboral.
 
 ```{r}
-# Hipótesis 4: Condiciones Extralaborales vs. Desempeño General
+# Hipótesis 4: Condiciones extralaborales vs. desempeño general
+
 datos_analisis %>%
   janitor::tabyl(nivel_cond_extralaborales, nivel_desempeno_total) %>%
   janitor::adorn_totals(where = c("row", "col")) %>%
@@ -210,199 +211,119 @@ datos_analisis %>%
   janitor::adorn_ns(position = "front") %>%
   dplyr::rename(`Condiciones Extralaborales` = nivel_cond_extralaborales) %>%
   knitr::kable(
-    caption = "Tabla Cruzada: Desempeño Laboral General según Condiciones de Trabajo Extralaborales",
+    caption = "Tabla 4: Desempeño laboral (constructo) según condiciones de trabajo extralaborales (Dimensión 3)",
     escape = FALSE
   ) %>%
   kableExtra::kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE) %>%
   kableExtra::add_header_above(c(" " = 1, "Desempeño Laboral" = 3, " " = 1))
 ```
 
-# Modelado de Regresión Logística Ordinal ---
+# Modelado de regresión logística ordinal
+
+Para evaluar cómo las diferentes dimensiones de las condiciones de trabajo se asocian con el desempeño laboral categorizado en “Bajo”, “Medio” y “Alto”, empleamos modelos de regresión logística ordinal (también conocidos como modelos de “odds proporcionales” o cumulative logit). A diferencia de la regresión logística binaria, que predice la probabilidad de pertenecer a uno de dos grupos, la regresión ordinal extiende este enfoque a variables dependientes que mantienen un orden natural en más de dos niveles, preservando la información de rango sin asumir distancias iguales entre categorías.
+
+En cada uno de los cuatro modelos, la variable respuesta es **nivel_desempeno_total**, un factor ordenado con tres niveles. El modelo estima de manera simultánea dos umbrales (o interceptos) que separan “Bajo” de “Medio” y “Medio” de “Alto”, así como un coeficiente para el predictor de interés (p. ej. nivel_condiciones_total). Conceptualmente, el modelo calcula la probabilidad acumulada de que un individuo se encuentre en un nivel de desempeño igual o inferior a cada umbral, y relaciona estas probabilidades con la categoría de las condiciones de trabajo a través de la función logística:
 
 
 ```{r}
-# --- 2. Modelado de Regresión Logística Ordinal para cada Hipótesis ---
 
-# Modelo para Hipótesis 1: Condiciones de Trabajo Generales
-modelo_h1 <- ordinal::clm(nivel_desempeno_total ~ nivel_condiciones_total, data = datos_analisis)
+#| label: refactor-individual-tables-interpretable
+#| code-summary: "Creación de tablas individuales con coeficientes interpretables y estadísticos de ajuste"
 
-# Modelo para Hipótesis 2: Condiciones Individuales
-modelo_h2 <- ordinal::clm(nivel_desempeno_total ~ nivel_cond_individuales, data = datos_analisis)
+# Asegúrate de tener cargada la librería htmltools
+library(htmltools)
 
-# Modelo para Hipótesis 3: Condiciones Intralaborales
-modelo_h3 <- ordinal::clm(nivel_desempeno_total ~ nivel_cond_intralaborales, data = datos_analisis)
+# 1. Definir los predictores de interés en un vector
+predictores <- c(
+  "nivel_condiciones_total",
+  "nivel_cond_individuales",
+  "nivel_cond_intralaborales",
+  "nivel_cond_extralaborales"
+)
 
-# Modelo para Hipótesis 4: Condiciones Extralaborales
-modelo_h4 <- ordinal::clm(nivel_desempeno_total ~ nivel_cond_extralaborales, data = datos_analisis)
-```
-
-
-```{r}
-tab_ord1 <- tidy(modelo_h1, conf.int = TRUE) %>%
-  mutate(
-    OR       = exp(estimate),      # convierte log-odds en odds ratio
-    p.value  = 2 * (1 - pnorm(abs(statistic))),
-    signif   = case_when(
-      p.value < 0.001 ~ "***",
-      p.value < 0.01  ~ "**",
-      p.value < 0.05  ~ "*",
-      TRUE            ~ ""
+# 2. Ajustar todos los modelos usando purrr::map y guardarlos en una lista nombrada
+lista_modelos <- predictores %>%
+  set_names(predictores) %>%
+  purrr::map(~ {
+    # Creamos una fórmula que trata al predictor como un factor estándar (no ordenado).
+    # Esto genera coeficientes más fáciles de interpretar (ej. Regular vs. Malo).
+    formula_mod <- as.formula(
+      paste0("nivel_desempeno_total ~ factor(", .x, ", ordered = TRUE)")
     )
-  ) %>% dplyr::  select(term, estimate, OR, std.error, statistic, p.value, signif, conf.low, conf.high)
+    ordinal::clm(formula_mod, data = datos_analisis)
+  })
 
-tab_ord2 <- tidy(modelo_h2, conf.int = TRUE) %>%
-  mutate(
-    OR       = exp(estimate),      # convierte log-odds en odds ratio
-    p.value  = 2 * (1 - pnorm(abs(statistic))),
-    signif   = case_when(
-      p.value < 0.001 ~ "***",
-      p.value < 0.01  ~ "**",
-      p.value < 0.05  ~ "*",
-      TRUE            ~ ""
-    )
-  ) %>% dplyr ::  select(term, estimate, OR, std.error, statistic, p.value, signif, conf.low, conf.high)
+# 3. Crear una función reutilizable que DEVUELVE un objeto de tabla gt
+crear_tabla_modelo <- function(modelo, titulo_tabla, nombre_predictor) {
+  
+  # Procesar coeficientes del modelo para obtener un dataframe limpio
+  tidy_df <- broom::tidy(modelo, conf.int = TRUE, exponentiate = TRUE) %>%
+    dplyr::mutate(
+      p.value = 2 * (1 - pnorm(abs(statistic))),
+      signif = case_when(
+        p.value < 0.001 ~ "***",
+        p.value < 0.01  ~ "**",
+        p.value < 0.05  ~ "*",
+        TRUE ~ ""
+      )
+    ) %>%
+    dplyr::rename(OR = estimate) %>%
+    # Limpiar los nombres de los términos para que sean más legibles en la tabla
+    dplyr::mutate(term = stringr::str_remove_all(term, paste0("factor\\(", nombre_predictor, ", ordered = FALSE\\)"))) %>%
+    dplyr::select(term, OR, std.error, statistic, p.value, signif, conf.low, conf.high)
 
-tab_ord3 <- tidy(modelo_h3, conf.int = TRUE) %>%
-  mutate(
-    OR       = exp(estimate),      # convierte log-odds en odds ratio
-    p.value  = 2 * (1 - pnorm(abs(statistic))),
-    signif   = case_when(
-      p.value < 0.001 ~ "***",
-      p.value < 0.01  ~ "**",
-      p.value < 0.05  ~ "*",
-      TRUE            ~ ""
-    )
-  ) %>% dplyr:: select(term, estimate, OR, std.error, statistic, p.value, signif, conf.low, conf.high)
+  # Extraer estadísticos de ajuste del modelo
+  gof <- broom::glance(modelo)
+  gof_string <- glue::glue(
+    "Observaciones: {gof$nobs} | Log-Lik: {round(gof$logLik, 2)} | AIC: {round(gof$AIC, 2)} | BIC: {round(gof$BIC, 2)}"
+  )
 
-tab_ord4 <- tidy(modelo_h4, conf.int = TRUE) %>%
-  mutate(
-    OR       = exp(estimate),      # convierte log-odds en odds ratio
-    p.value  = 2 * (1 - pnorm(abs(statistic))),
-    signif   = case_when(
-      p.value < 0.001 ~ "***",
-      p.value < 0.01  ~ "**",
-      p.value < 0.05  ~ "*",
-      TRUE            ~ ""
-    )
-  ) %>% dplyr:: select(term, estimate, OR, std.error, statistic, p.value, signif, conf.low, conf.high)
+  # Generar y devolver la tabla con gt
+  gt::gt(tidy_df) %>%
+    gt::tab_header(
+      title = md(glue::glue("**{titulo_tabla}**")),
+      subtitle = md("Odds Ratios (OR), p-values y significancia (Categoría de referencia: Mala)")
+    ) %>%
+    gt::fmt_number(columns = where(is.numeric), decimals = 2) %>%
+    gt::cols_label(
+      term = "Predictor", std.error = "SE", statistic = "z",
+      p.value = "p", signif = "Signif", conf.low = "IC 2.5%", conf.high = "IC 97.5%"
+    ) %>%
+    gt::tab_source_note(md("Signif.: * p<0.05; ** p<0.01; *** p<0.001")) %>%
+    gt::tab_source_note(md(gof_string))
+}
+
+# 4. Definir los títulos para cada tabla
+titulos <- c(
+  "Influencia de las condiciones laborales",
+  "Influencia de las condiciones individuales",
+  "Influencia de las condiciones intralaborales",
+  "Influencia de las condiciones extralaborales"
+)
+
+# 5. Aplicar la función a cada modelo para generar una LISTA de tablas
+lista_de_tablas <- purrr::pmap(
+  list(
+    modelo = lista_modelos,
+    titulo_tabla = titulos,
+    nombre_predictor = names(lista_modelos)
+  ),
+  crear_tabla_modelo
+)
+
+# 6. Combinar y mostrar todas las tablas de la lista.
+# Esta es la forma más robusta de asegurar que Quarto renderice todo el contenido.
+htmltools::tagList(lista_de_tablas)
 
 ```
 
-
-```{r}
-library(gt)
-tab_ord1 %>%
-  gt() %>%
-  tab_header(
-    title = md("**Influencia de las condiciones laborales**"),
-    subtitle = md("Coeficientes (log-odds), OR, p-values y significancia")
-  ) %>%
-  fmt_number(
-    columns = vars(estimate, OR, std.error, statistic, p.value, conf.low, conf.high),
-    decimals = 2
-  ) %>%
-  cols_label(
-    term       = "Predictor",
-    estimate   = "Coef",
-    OR         = "OR",
-    std.error  = "SE",
-    statistic  = "z",
-    p.value    = "p",
-    signif     = "Signif",
-    conf.low   = "IC 2.5%",
-    conf.high  = "IC 97.5%"
-  ) %>%
-  tab_source_note(md("Signif.: * p<0.05; ** p<0.01; *** p<0.001"))
-```
-
-
-
-```{r}
-library(gt)
-tab_ord2 %>%
-  gt() %>%
-  tab_header(
-    title = md("**Influencia de las condiciones individuales**"),
-    subtitle = md("Coeficientes (log-odds), OR, p-values y significancia")
-  ) %>%
-  fmt_number(
-    columns = vars(estimate, OR, std.error, statistic, p.value, conf.low, conf.high),
-    decimals = 2
-  ) %>%
-  cols_label(
-    term       = "Predictor",
-    estimate   = "Coef",
-    OR         = "OR",
-    std.error  = "SE",
-    statistic  = "z",
-    p.value    = "p",
-    signif     = "Signif",
-    conf.low   = "IC 2.5%",
-    conf.high  = "IC 97.5%"
-  ) %>%
-  tab_source_note(md("Signif.: * p<0.05; ** p<0.01; *** p<0.001"))
-```
-```{r}
-library(gt)
-tab_ord3 %>%
-  gt() %>%
-  tab_header(
-    title = md("**Influencia de las condiciones intralaborales**"),
-    subtitle = md("Coeficientes (log-odds), OR, p-values y significancia")
-  ) %>%
-  fmt_number(
-    columns = vars(estimate, OR, std.error, statistic, p.value, conf.low, conf.high),
-    decimals = 2
-  ) %>%
-  cols_label(
-    term       = "Predictor",
-    estimate   = "Coef",
-    OR         = "OR",
-    std.error  = "SE",
-    statistic  = "z",
-    p.value    = "p",
-    signif     = "Signif",
-    conf.low   = "IC 2.5%",
-    conf.high  = "IC 97.5%"
-  ) %>%
-  tab_source_note(md("Signif.: * p<0.05; ** p<0.01; *** p<0.001"))
-```
-
-```{r}
-library(gt)
-tab_ord4 %>%
-  gt() %>%
-  tab_header(
-    title = md("**Influencia de las condiciones extralaborales**"),
-    subtitle = md("Coeficientes (log-odds), OR, p-values y significancia")
-  ) %>%
-  fmt_number(
-    columns = vars(estimate, OR, std.error, statistic, p.value, conf.low, conf.high),
-    decimals = 2
-  ) %>%
-  cols_label(
-    term       = "Predictor",
-    estimate   = "Coef",
-    OR         = "OR",
-    std.error  = "SE",
-    statistic  = "z",
-    p.value    = "p",
-    signif     = "Signif",
-    conf.low   = "IC 2.5%",
-    conf.high  = "IC 97.5%"
-  ) %>%
-  tab_source_note(md("Signif.: * p<0.05; ** p<0.01; *** p<0.001"))
-```
 
 # Discusión 
-
-Claro, aquí tienes una redacción de los resultados y la discusión de las hipótesis, presentada de manera clara y directa, como si fuera parte de una sustentación de tesis.
 
 
 **Prueba de Hipótesis**
 
 A continuación, se presentan los resultados de la prueba de hipótesis para determinar la influencia de las diferentes dimensiones de las condiciones de trabajo sobre el desempeño laboral del personal de salud asistencial, utilizando los modelos de regresión logística ordinal.
-
 
 **Hipótesis General: Influencia de las Condiciones de Trabajo Generales**
 
@@ -418,27 +339,28 @@ Los resultados del modelo de regresión ordinal nos proporcionan evidencia estad
 El análisis estadístico permite **aceptar esta hipótesis** de manera contundente. El modelo reveló que las condiciones individuales son el predictor más potente del desempeño laboral, con un nivel de significancia muy alto (p < 0.001). El Odds Ratio (OR) de 20.40 es el más elevado de todo el estudio, lo que significa que por cada nivel que mejoran las condiciones personales de un trabajador (como su salud, motivación o competencias), las probabilidades de que alcance un mejor desempeño **se multiplican por más de 20**.
 
 
-
 **Hipótesis Específica 2: Influencia de las Condiciones Intralaborales**
-
 * **Hipótesis (H3):** Existe influencia significativa de las condiciones de trabajo intralaborales en el desempeño laboral del personal de salud asistencial en un centro de salud, Lima 2025.
 
 Los datos respaldan y permiten **aceptar esta hipótesis**. La influencia de las condiciones dentro del centro de salud (como el ambiente, los recursos y el liderazgo) sobre el desempeño es **positiva y altamente significativa** (p < 0.001). El Odds Ratio (OR) de 14.03 demuestra que una mejora de un nivel en estas condiciones **multiplica por 14** las probabilidades de que el personal de salud tenga un desempeño superior. Esto subraya la importancia crítica del entorno laboral directo.
 
-
-
 **Hipótesis Específica 3: Influencia de las Condiciones Extralaborales**
-
 * **Hipótesis (H4):** Existe influencia significativa de las condiciones de trabajo extralaborales en el desempeño laboral del personal de salud asistencial en un centro de salud, Lima 2025.
 
 Finalmente, los resultados también nos llevan a **aceptar esta hipótesis**. Se encontró una influencia **estadísticamente significativa** (p < 0.001) de los factores externos al trabajo sobre el rendimiento del personal. Con un Odds Ratio (OR) de 13.05, el modelo muestra que por cada nivel de mejora en las condiciones de vida fuera del trabajo, las probabilidades de un mejor desempeño laboral **se multiplican por 13**. Este hallazgo confirma que el bienestar personal del trabajador es un factor que impacta de manera considerable en su rendimiento profesional.
 
 
+# Análisis de resultados: Yuleycy
 
+## Trasnformación de datos
 
+El fragmento inicia tomando la base  y convierte las respuestas itemizadas de cada participante en indicadores sintéticos. Primero calcula cuatro promedios: **Agotamiento emocional** (ítems p1–p10), **Despersonalización** (p11–p20), **Realización personal** (p21–p30) y un índice global de **Bienestar laboral** que resume los 45 ítems i1–i45. Cada promedio se obtiene con `rowMeans`, que suma solo los valores válidos y divide entre el número de ítems respondidos, de modo que cada dimensión queda representada por un valor continuo entre el mínimo y el máximo posible de la escala.
 
-# Analiis de datos Yuleisy
+Con esos tres componentes del burnout se crea un quinto índice, **Síndrome B**, que es la media aritmética de Agotamiento emocional, Despersonalización y Realización personal. Así se dispone de un indicador agregado que resume la severidad global del síndrome para cada individuo.
 
+El paso final transforma cada índice continuo en una variable ordinal de tres categorías usando terciles. Para ello se calculan los cuantiles 33 % y 67 % de cada distribución y se asignan las etiquetas “Bajo”, “Medio” y “Alto”. De ese modo se obtienen el **Nivel de Bienestar**, el **Nivel del Síndrome B** y los niveles específicos de Agotamiento, Despersonalización y Realización. Estas nuevas variables son factores ordenados cuyo primer nivel corresponde al tercio con puntuaciones más bajas y el tercero al más alto, lo que facilita comparaciones proporcionales y análisis de regresión ordinal sin perder la jerarquía inherente a las escalas originales.
+
+# Exploración bivariada
 
 ```{r}
 # Crear el dataframe para el análisis
@@ -497,14 +419,12 @@ datos_analisis <- yuma %>%
   )
 ```
 
-# Tabla 1
+## Tabla 1: Síndrome de B. vs bienestar laboral
 
 El análisis de la relación entre el Síndrome de Burnout General y el Bienestar Laboral muestra una clara tendencia inversa. Es particularmente revelador que, del total de 22 trabajadores con un nivel alto de burnout, ninguno de ellos (0.0%) reportó un nivel de bienestar alto; su percepción se concentró exclusivamente en los niveles medio (59.1%) y bajo (40.9%). Por otro lado, quienes presentaron un nivel bajo de burnout mostraron una distribución polarizada, con un 43.6% reportando bienestar bajo y un idéntico 43.6% reportando bienestar alto, sugiriendo que la ausencia de burnout no garantiza por sí sola un alto bienestar.
 
 
 ```{r}
-# --- 2. Tablas Cruzadas para cada Hipótesis ---
-
 # Tabla 1: Síndrome de Burnout General vs. Bienestar Laboral
 datos_analisis %>%
   janitor::tabyl(Nivel_Sindrome_B, Nivel_Bienestar) %>%
@@ -514,14 +434,14 @@ datos_analisis %>%
   janitor::adorn_ns(position = "front") %>%
   dplyr::rename(`Síndrome de Burnout` = Nivel_Sindrome_B) %>%
   knitr::kable(
-    caption = "Tabla Cruzada: Bienestar Laboral según Nivel de Síndrome de Burnout General",
+    caption = "Tabla 1: Bienestar Laboral (constructo) según Nivel de Síndrome de Burnout (Constructo)",
     escape = FALSE
   ) %>%
   kableExtra::kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE) %>%
   kableExtra::add_header_above(c(" " = 1, "Nivel de Bienestar Laboral" = 3, " " = 1))
 ```
 
-# Tabla 2
+## Tabla 2: Agotamiento emocional vs bienestar laboral
 
 Al examinar la dimensión de Agotamiento Emocional, se observa una fuerte relación negativa con el bienestar. De los 26 participantes con un nivel alto de agotamiento, su bienestar se dividió equitativamente entre los niveles bajo (50.0%) y medio (50.0%), sin que ninguno lograra un bienestar alto. Inversamente, en el grupo con bajo agotamiento emocional, casi la mitad (48.1%) alcanzó un nivel de bienestar alto, demostrando que un bajo agotamiento es una condición casi necesaria, aunque no suficiente, para un alto bienestar laboral.
 
@@ -535,14 +455,14 @@ datos_analisis %>%
   janitor::adorn_ns(position = "front") %>%
   dplyr::rename(`Agotamiento Emocional` = Nivel_Agotamiento) %>%
   knitr::kable(
-    caption = "Tabla Cruzada: Bienestar Laboral según Nivel de Agotamiento Emocional",
+    caption = "Tabla 2: Bienestar Laboral según Nivel de Agotamiento Emocional (Dimensión 1)",
     escape = FALSE
   ) %>%
   kableExtra::kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE) %>%
   kableExtra::add_header_above(c(" " = 1, "Nivel de Bienestar Laboral" = 3, " " = 1))
 ```
 
-# Tabla 3
+## Tabla 3: Despersonalización vs bienestar laboral
 
 La relación entre la Despersonalización y el bienestar laboral es una de las más definidas del estudio. Se evidencia una fuerte tendencia negativa, donde un nivel bajo de despersonalización se asocia claramente con un bienestar alto (63.0%). Conforme la despersonalización aumenta a un nivel medio o alto, la probabilidad de tener un bienestar alto desaparece por completo (0.0%). De hecho, un nivel alto de despersonalización conduce a que la percepción del bienestar se ubique predominantemente en los niveles medio (66.7%) y bajo (33.3%).
 
@@ -556,14 +476,14 @@ datos_analisis %>%
   janitor::adorn_ns(position = "front") %>%
   dplyr::rename(`Despersonalización` = Nivel_Despersonalizacion) %>%
   knitr::kable(
-    caption = "Tabla Cruzada: Bienestar Laboral según Nivel de Despersonalización",
+    caption = "Tabla 3: Bienestar Laboral (constructo) según Nivel de Despersonalización (Dimensión 2)",
     escape = FALSE
   ) %>%
   kableExtra::kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE) %>%
   kableExtra::add_header_above(c(" " = 1, "Nivel de Bienestar Laboral" = 3, " " = 1))
 ```
 
-# Tabla 4
+## Tabla 4: Realización personal vs bienestar laboral
 
 Finalmente, el cruce entre la Realización Personal y el Bienestar Laboral presenta el resultado más complejo y matizado. Contrario a una simple relación positiva, los datos muestran una dinámica particular. Un bajo nivel de realización personal efectivamente impide alcanzar un bienestar alto (0.0%). Sin embargo, lo más notable ocurre en el grupo con alta realización personal, donde el bienestar se polariza: una mayoría del 63.6% reportó un bienestar bajo, mientras que el 36.4% restante reportó un bienestar alto, sin que ningún individuo se ubicara en el nivel medio. Este hallazgo sugiere que una alta realización personal no se traduce directamente en un alto bienestar para todos, pudiendo coexistir con sentimientos de insatisfacción en una parte significativa de este grupo.
 
@@ -577,7 +497,7 @@ datos_analisis %>%
   janitor::adorn_ns(position = "front") %>%
   dplyr::rename(`Realización Personal` = Nivel_Realizacion) %>%
   knitr::kable(
-    caption = "Tabla Cruzada: Bienestar Laboral según Nivel de Realización Personal",
+    caption = "Tabla 4: Bienestar Laboral según Nivel de Realización Personal (Dimensión 3)",
     escape = FALSE
   ) %>%
   kableExtra::kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE) %>%
@@ -586,9 +506,6 @@ datos_analisis %>%
 
 
 ```{r}
-# --- 3. Modelado de Regresión Logística Ordinal para cada Hipótesis ---
-# Se contrasta el Bienestar Laboral (VD) con el Síndrome de Burnout y sus dimensiones (VIs)
-
 # Modelo para Hipótesis 1: Síndrome de Burnout General
 modelo_h1 <- ordinal::clm(Nivel_Bienestar ~ Nivel_Sindrome_B, data = datos_analisis)
 
@@ -600,9 +517,6 @@ modelo_h3 <- ordinal::clm(Nivel_Bienestar ~ Nivel_Despersonalizacion, data = dat
 
 # Modelo para Hipótesis 4: Dimensión Realización Personal
 modelo_h4 <- ordinal::clm(Nivel_Bienestar ~ Nivel_Realizacion, data = datos_analisis)
-
-
-# --- 4. Presentación de Resultados de Regresión en Tabla Comparativa ---
 ```
 
 
@@ -618,167 +532,75 @@ lista_modelos <- list(
 ```
 
 # Modelado de regresión logística ordinal
-```{r}
 
-tab_ord1 <- tidy(modelo_h1, conf.int = TRUE) %>%
-  mutate(
-    OR       = exp(estimate),      # convierte log-odds en odds ratio
-    p.value  = 2 * (1 - pnorm(abs(statistic))),
-    signif   = case_when(
-      p.value < 0.001 ~ "***",
-      p.value < 0.01  ~ "**",
-      p.value < 0.05  ~ "*",
-      TRUE            ~ ""
+
+```{r}
+# Vector de predictores ---------------------------------------------------------
+# Nota: Cada variable posee tres categorías ordinales: Bajo, Medio, Alto.
+# Vector de predictores ---------------------------------------------------------
+predictores <- c(
+  "Nivel_Sindrome_B",        # Síndrome de burnout global
+  "Nivel_Agotamiento",       # Agotamiento emocional
+  "Nivel_Despersonalizacion",# Despersonalización
+  "Nivel_Realizacion"        # Realización personal
+)
+
+# Ajuste de los modelos ---------------------------------------------------------
+lista_modelos <- predictores %>%
+  set_names(predictores) %>%
+  map(~ {
+    formula_mod <- as.formula(
+      paste0("Nivel_Bienestar ~ factor(", .x, ", ordered = TRUE)")
     )
-  ) %>% dplyr::  select(term, estimate, OR, std.error, statistic, p.value, signif, conf.low, conf.high)
+    ordinal::clm(formula_mod, data = datos_analisis)
+  })
 
-tab_ord2 <- tidy(modelo_h2, conf.int = TRUE) %>%
-  mutate(
-    OR       = exp(estimate),      # convierte log-odds en odds ratio
-    p.value  = 2 * (1 - pnorm(abs(statistic))),
-    signif   = case_when(
-      p.value < 0.001 ~ "***",
-      p.value < 0.01  ~ "**",
-      p.value < 0.05  ~ "*",
-      TRUE            ~ ""
-    )
-  ) %>% dplyr ::  select(term, estimate, OR, std.error, statistic, p.value, signif, conf.low, conf.high)
+# Función para crear tablas gt ---------------------------------------------------
+crear_tabla_modelo <- function(modelo, titulo_tabla, nombre_predictor) {
+  tidy_df <- tidy(modelo, conf.int = TRUE, exponentiate = TRUE) %>%
+    mutate(p.value = 2 * (1 - pnorm(abs(statistic))),
+           signif  = case_when(p.value < 0.001 ~ "***",
+                               p.value < 0.01  ~ "**",
+                               p.value < 0.05  ~ "*",
+                               TRUE            ~ "")) %>%
+    rename(OR = estimate) %>%
+    mutate(term = stringr::str_remove_all(term,
+                                 paste0("factor\\(", nombre_predictor, ", ordered = TRUE\\)"))) %>%
+    dplyr::select(term, OR, std.error, statistic, p.value, signif, conf.low, conf.high)
 
-tab_ord3 <- tidy(modelo_h3, conf.int = TRUE) %>%
-  mutate(
-    OR       = exp(estimate),      # convierte log-odds en odds ratio
-    p.value  = 2 * (1 - pnorm(abs(statistic))),
-    signif   = case_when(
-      p.value < 0.001 ~ "***",
-      p.value < 0.01  ~ "**",
-      p.value < 0.05  ~ "*",
-      TRUE            ~ ""
-    )
-  ) %>% dplyr:: select(term, estimate, OR, std.error, statistic, p.value, signif, conf.low, conf.high)
+  gof <- glance(modelo)
+  gof_string <- glue("Observaciones: {gof$nobs} | Log‑Lik: {round(gof$logLik, 2)} | AIC: {round(gof$AIC, 2)} | BIC: {round(gof$BIC, 2)}")
 
-tab_ord4 <- tidy(modelo_h4, conf.int = TRUE) %>%
-  mutate(
-    OR       = exp(estimate),      # convierte log-odds en odds ratio
-    p.value  = 2 * (1 - pnorm(abs(statistic))),
-    signif   = case_when(
-      p.value < 0.001 ~ "***",
-      p.value < 0.01  ~ "**",
-      p.value < 0.05  ~ "*",
-      TRUE            ~ ""
-    )
-  ) %>% dplyr:: select(term, estimate, OR, std.error, statistic, p.value, signif, conf.low, conf.high)
+  gt(tidy_df) %>%
+    tab_header(title = md(glue("**{titulo_tabla}**")),
+               subtitle = md("Odds Ratios (OR) con IC 95 % (ref.: Bajo)")) %>%
+    fmt_number(columns = where(is.numeric), decimals = 2) %>%
+    cols_label(term = "Categoría", std.error = "SE", statistic = "z",
+               p.value = "p", signif = "Sig.", conf.low = "IC 2.5 %",
+               conf.high = "IC 97.5 %") %>%
+    tab_source_note(md("Sig.: * p<0.05; ** p<0.01; *** p<0.001")) %>%
+    tab_source_note(md(gof_string))
+}
 
+# Títulos para las tablas --------------------------------------------------------
+titulos <- c(
+  "Influencia del síndrome de burnout global",
+  "Influencia del agotamiento emocional",
+  "Influencia de la despersonalización",
+  "Influencia de la realización personal"
+)
+
+# Generar lista de tablas --------------------------------------------------------
+lista_de_tablas <- pmap(list(modelo          = lista_modelos,
+                             titulo_tabla    = titulos,
+                             nombre_predictor = names(lista_modelos)),
+                        crear_tabla_modelo)
+
+# Renderizar todas las tablas en Quarto -----------------------------------------
+htmltools::tagList(lista_de_tablas)
 ```
 
-```{r}
-
-library(gt)
-tab_ord1 %>%
-  gt() %>%
-  tab_header(
-    title = md("**Influencia del Sindrome de B en el Bienestar laboral**"),
-    subtitle = md("Coeficientes (log-odds), OR, p-values y significancia")
-  ) %>%
-  fmt_number(
-    columns = vars(estimate, OR, std.error, statistic, p.value, conf.low, conf.high),
-    decimals = 2
-  ) %>%
-  cols_label(
-    term       = "Predictor",
-    estimate   = "Coef",
-    OR         = "OR",
-    std.error  = "SE",
-    statistic  = "z",
-    p.value    = "p",
-    signif     = "Signif",
-    conf.low   = "IC 2.5%",
-    conf.high  = "IC 97.5%"
-  ) %>%
-  tab_source_note(md("Signif.: * p<0.05; ** p<0.01; *** p<0.001"))
-```
-
-```{r}
-library(gt)
-tab_ord2 %>%
-  gt() %>%
-  tab_header(
-    title = md("**Influencia deL agotamiento emocional en el bienestar laboral**"),
-    subtitle = md("Coeficientes (log-odds), OR, p-values y significancia")
-  ) %>%
-  fmt_number(
-    columns = vars(estimate, OR, std.error, statistic, p.value, conf.low, conf.high),
-    decimals = 2
-  ) %>%
-  cols_label(
-    term       = "Predictor",
-    estimate   = "Coef",
-    OR         = "OR",
-    std.error  = "SE",
-    statistic  = "z",
-    p.value    = "p",
-    signif     = "Signif",
-    conf.low   = "IC 2.5%",
-    conf.high  = "IC 97.5%"
-  ) %>%
-  tab_source_note(md("Signif.: * p<0.05; ** p<0.01; *** p<0.001"))
-```
-
-
-```{r}
-
-library(gt)
-tab_ord3 %>%
-  gt() %>%
-  tab_header(
-    title = md("**Influencia de la despersonalización en el bienestar laboral**"),
-    subtitle = md("Coeficientes (log-odds), OR, p-values y significancia")
-  ) %>%
-  fmt_number(
-    columns = vars(estimate, OR, std.error, statistic, p.value, conf.low, conf.high),
-    decimals = 2
-  ) %>%
-  cols_label(
-    term       = "Predictor",
-    estimate   = "Coef",
-    OR         = "OR",
-    std.error  = "SE",
-    statistic  = "z",
-    p.value    = "p",
-    signif     = "Signif",
-    conf.low   = "IC 2.5%",
-    conf.high  = "IC 97.5%"
-  ) %>%
-  tab_source_note(md("Signif.: * p<0.05; ** p<0.01; *** p<0.001"))
-```
-
-```{r}
-library(gt)
-tab_ord4 %>%
-  gt() %>%
-  tab_header(
-    title = md("**Influencia de la realización personal en el bienestar laboral**"),
-    subtitle = md("Coeficientes (log-odds), OR, p-values y significancia")
-  ) %>%
-  fmt_number(
-    columns = vars(estimate, OR, std.error, statistic, p.value, conf.low, conf.high),
-    decimals = 2
-  ) %>%
-  cols_label(
-    term       = "Predictor",
-    estimate   = "Coef",
-    OR         = "OR",
-    std.error  = "SE",
-    statistic  = "z",
-    p.value    = "p",
-    signif     = "Signif",
-    conf.low   = "IC 2.5%",
-    conf.high  = "IC 97.5%"
-  ) %>%
-  tab_source_note(md("Signif.: * p<0.05; ** p<0.01; *** p<0.001"))
-```
-
-
-
+# Discusión
 
 **Análisis de los Modelos de Regresión para el Bienestar Laboral**
 
@@ -787,34 +609,30 @@ Para cuantificar la influencia de cada dimensión del Síndrome de Burnout sobre
 
 **1. Influencia del Síndrome de Burnout General en el Bienestar Laboral**
 
-El primer modelo evaluó la influencia del Síndrome de Burnout, medido como un constructo general. El análisis del efecto lineal principal (`Nivel_Sindrome_B.L`) arrojó un p-valor de 0.10, el cual es superior al nivel de significancia estándar (α = 0.05). Por lo tanto, la hipótesis de una influencia directa y significativa del burnout general sobre el bienestar es rechazada. **Esto sugiere que tratar el burnout como un concepto único enmascara los efectos reales de sus componentes; sus dimensiones, como se verá, tienen influencias distintas y mucho más claras por separado.**
+El primer modelo evaluó la influencia del Síndrome de Burnout, medido como un constructo general. El análisis del efecto lineal principal (`Nivel_Sindrome_B.L`) arrojó un p-valor de 0.10, el cual es superior al nivel de significancia estándar (α = 0.05). Por lo tanto, la hipótesis de una influencia directa y significativa del burnout general sobre el bienestar es rechazada. Esto sugiere que tratar el burnout como un concepto único enmascara los efectos reales de sus componentes; sus dimensiones, como se verá, tienen influencias distintas y mucho más claras por separado.
 
 
 **2. Influencia de la Despersonalización en el Bienestar Laboral**
 
-El segundo modelo, enfocado en la Despersonalización, encontró una influencia negativa y altamente significativa (p < 0.001) sobre el Bienestar Laboral. El Odds Ratio (OR) de 0.23 indica que por cada nivel que aumenta la despersonalización, las probabilidades de reportar un mayor bienestar se reducen en un 77%. El término cuadrático también fue significativo, indicando que la relación es robusta pero no uniforme. En conclusión, la evidencia para aceptar la hipótesis de su influencia es inequívoca; **la despersonalización se confirma no solo como un predictor válido, sino como el factor más perjudicial y con el impacto más claro sobre el deterioro del bienestar laboral en la muestra estudiada.**
+El segundo modelo, enfocado en la Despersonalización, encontró una influencia negativa y altamente significativa (p < 0.001) sobre el Bienestar Laboral. El Odds Ratio (OR) de 0.23 indica que por cada nivel que aumenta la despersonalización, las probabilidades de reportar un mayor bienestar se reducen en un 77%. El término cuadrático también fue significativo, indicando que la relación es robusta pero no uniforme. En conclusión, la evidencia para aceptar la hipótesis de su influencia es inequívoca; la despersonalización se confirma no solo como un predictor válido, sino como el factor más perjudicial y con el impacto más claro sobre el deterioro del bienestar laboral en la muestra estudiada.
 
 
 **3. Influencia del Agotamiento Emocional en el Bienestar Laboral**
 
-El modelo para la dimensión de Agotamiento Emocional arrojó un resultado complejo. El efecto lineal principal no fue estadísticamente significativo (p = 0.08), pero el término cuadrático sí lo fue (p = 0.04). Esto significa que la hipótesis de una influencia lineal y directa del agotamiento sobre el bienestar debe ser rechazada. Sin embargo, esto no descarta su importancia; por el contrario, **revela que su impacto sobre el bienestar existe, pero se manifiesta de una manera más compleja y no progresiva, dependiendo críticamente del nivel de agotamiento que se experimente.**
+El modelo para la dimensión de Agotamiento Emocional arrojó un resultado complejo. El efecto lineal principal no fue estadísticamente significativo (p = 0.08), pero el término cuadrático sí lo fue (p = 0.04). Esto significa que la hipótesis de una influencia lineal y directa del agotamiento sobre el bienestar debe ser rechazada. Sin embargo, esto no descarta su importancia; por el contrario, revela que su impacto sobre el bienestar existe, pero se manifiesta de una manera más compleja y no progresiva, dependiendo críticamente del nivel de agotamiento que se experimente.
 
 **4. Influencia de la Realización Personal en el Bienestar Laboral**
 
-Finalmente, el modelo que analiza la Realización Personal confirmó la compleja relación observada previamente. El efecto lineal no fue significativo (p = 0.48), mientras que el efecto cuadrático sí lo fue (p = 0.03). En consecuencia, la hipótesis de que la realización personal influye de manera simple y positiva en el bienestar es rechazada por el modelo. Lejos de una relación directa, los hallazgos apuntan a una dinámica paradójica; **esto significa que, en la práctica, un alto nivel de realización personal no garantiza un mayor bienestar, revelando una de las interacciones más contra-intuitivas y ricas para la discusión de esta investigación.**
-
-# Analisis yessica
+Finalmente, el modelo que analiza la Realización Personal confirmó la compleja relación observada previamente. El efecto lineal no fue significativo (p = 0.48), mientras que el efecto cuadrático sí lo fue (p = 0.03). En consecuencia, la hipótesis de que la realización personal influye de manera simple y positiva en el bienestar es rechazada por el modelo. Lejos de una relación directa, los hallazgos apuntan a una dinámica paradójica; esto significa que, en la práctica, un alto nivel de realización personal no garantiza un mayor bienestar, revelando una de las interacciones más contra-intuitivas y ricas para la discusión de esta investigación.
 
 
-#### Transformación de Datos
+# Analisis de resultados: Yessica Rodas
+
+## Transformación de Datos
 
 Aquí convertimos las variables numéricas (puntajes) en variables categóricas ordenadas (Bajo, Medio, Alto) utilizando terciles. Esto nos permitirá crear las tablas cruzadas.
 
 ```{r}
-
-
-yessica <- read_excel("E:\\Bases de datos\\ucv_datasets\\yessica_dataset.xlsx")|> 
-  rename_with(tolower)
 
 yessica <- yessica %>%
   mutate(
@@ -884,7 +702,10 @@ datos_analisis_yessica <- yessica %>%
   )
 ```
 
-#### Tabla 1: Calidad General vs. Satisfacción del Usuario**
+
+# Exploración bivariada
+
+## Tabla 1: Calidad General vs. Satisfacción del Usuario
 
 La tabla muestra una asociación positiva entre la calidad general de la atención y la satisfacción del usuario. Se observa que entre los usuarios que percibieron una calidad "Baja", la mayoría (56.4%) reportó una satisfacción baja. En contraste, en el grupo que percibió una calidad "Alta", la mayor concentración de usuarios (66.7%) se encuentra en el nivel de satisfacción alta.
 
@@ -905,7 +726,8 @@ datos_analisis_yessica %>%
   kableExtra::add_header_above(c(" " = 1, "Nivel de Satisfacción del Usuario" = 3, " " = 1))
 ```
 
-#### Tabla 2: Calidad Técnica vs. Satisfacción del Usuario**
+## Tabla 2: Calidad Técnica vs. Satisfacción del Usuario
+
 Se observa una tendencia similar al analizar la dimensión de calidad técnica. Dentro del grupo que reportó una calidad técnica "Baja", la categoría más frecuente fue la de satisfacción baja (51.0%). Inversamente, entre quienes reportaron una calidad técnica "Alta", la categoría más común fue la de satisfacción alta (57.1%).
 
 ```{r}
@@ -925,7 +747,7 @@ datos_analisis_yessica %>%
   kableExtra::add_header_above(c(" " = 1, "Nivel de Satisfacción del Usuario" = 3, " " = 1))
 ```
 
-#### Tabla 3: Calidad Humana vs. Satisfacción del Usuario
+## Tabla 3: Calidad Humana vs. Satisfacción del Usuario
 
 La relación entre la calidad humana y la satisfacción del usuario es particularmente clara. Para los usuarios que percibieron una calidad humana "Baja", la satisfacción baja fue la respuesta más común (55.6%). Por otro lado, en el grupo que percibió una calidad humana "Alta", se registró el mayor porcentaje de satisfacción alta de todas las tablas (68.4%).
 
@@ -946,7 +768,7 @@ datos_analisis_yessica %>%
   kableExtra::add_header_above(c(" " = 1, "Nivel de Satisfacción del Usuario" = 3, " " = 1))
 ```
 
-#### Tabla 4: Calidad del Entorno vs. Satisfacción del Usuario
+## Tabla 4: Calidad del Entorno vs. Satisfacción del Usuario
 
 La calidad del entorno también muestra una asociación positiva con la satisfacción. Entre los usuarios que calificaron el entorno como "Bajo", la categoría de satisfacción más frecuente fue la baja (48.6%). De manera consistente, en el grupo que calificó el entorno como "Alto", la mayoría de los usuarios (60.9%) reportó un nivel de satisfacción alta.
 
@@ -968,15 +790,11 @@ datos_analisis_yessica %>%
 ```
 
 
-### 3. Prueba de Hipótesis con Tau-b de Kendall
+# Prueba de Hipótesis con Tau-b de Kendall
 
 Para probar formalmente las hipótesis, se utilizó el coeficiente de correlación Tau-b de Kendall, adecuado para variables ordinales. Esta prueba nos permite medir la fuerza y la dirección de la asociación entre los niveles de calidad de la atención y los niveles de satisfacción del usuario, determinando si la relación observada es estadísticamente significativa.
 
 ```{r}
-# --- Realización de las Pruebas de Correlación ---
-
-# Se aplica as.numeric() a cada variable para convertirlas de factor a número,
-# lo cual es requerido por la función cor.test().
 
 # H. General
 test_general <- cor.test(~ as.numeric(nivel_calidad_general) + as.numeric(nivel_satisfaccion_usuario), 
@@ -1010,12 +828,11 @@ interpretar_fuerza_tau <- function(tau) {
   )
 }
 
-# --- Cálculo del Tamaño de Muestra (N) ---
-# Contamos el número de casos completos para el análisis general.
 n_casos <- nrow(na.omit(datos_analisis_yessica[, c("nivel_calidad_general", "nivel_satisfaccion_usuario")]))
 ```
 
-#### Resultados para la Hipótesis General
+## Resultados para la Hipótesis General
+
 Para la hipótesis general, que postula una relación entre la Calidad General de la Atención y la Satisfacción del Usuario, se encontró un coeficiente de correlación Tau (τ) = 0.399. Este valor indica una asociación positiva de fuerza débil entre ambas variables. El resultado es altamente significativo (p < 0.001), lo que permite rechazar la hipótesis nula. Se concluye, por tanto, que existe una relación estadísticamente significativa, donde a una mejor percepción de la calidad general de la atención corresponde un mayor nivel de satisfacción del usuario.
 ```{r}
 # --- Tabla Detallada para la Hipótesis General ---
@@ -1035,7 +852,7 @@ knitr::kable(
 kableExtra::kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE)
 ```
 
-#### Resultados para la Hipótesis Específica 1
+## Resultados para la Hipótesis Específica 1
 Al analizar la primera dimensión, la Calidad Técnica, se obtuvo un coeficiente Tau (τ) = 0.322, interpretado como una asociación positiva débil. La prueba arrojó un resultado altamente significativo (p < 0.001). Esto confirma que la dimensión técnica de la atención está relacionada de manera significativa con la satisfacción del usuario; a medida que la percepción sobre la calidad técnica mejora, la satisfacción tiende a aumentar.
 ```{r}
 # --- Tabla Detallada para la Hipótesis Específica 1 ---
@@ -1055,7 +872,7 @@ knitr::kable(
 kableExtra::kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE)
 ```
 
-#### Resultados para la Hipótesis Específica 2**
+## Resultados para la Hipótesis Específica 2
 El análisis de la dimensión de Calidad Humana arrojó el resultado más robusto de todas las variables estudiadas. Se obtuvo un coeficiente Tau (τ) = 0.446, lo que representa una asociación positiva de fuerza moderada. La relación es altamente significativa (p < 0.001). Este hallazgo es particularmente relevante, ya que posiciona a la calidad humana como la dimensión con la asociación más fuerte con la satisfacción, subrayando el papel fundamental del trato y la empatía en la experiencia del usuario.
 ```{r}
 # --- Tabla Detallada para la Hipótesis Específica 2 ---
@@ -1075,8 +892,10 @@ knitr::kable(
 kableExtra::kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE)
 ```
 
-#### Resultados para la Hipótesis Específica 3
+## Resultados para la Hipótesis Específica 3
+
 Finalmente, para la dimensión de Calidad del Entorno, el coeficiente de correlación fue Tau (τ) = 0.273, indicando una asociación positiva débil. A pesar de ser la correlación de menor magnitud, el resultado es estadísticamente significativo (p = 0.002). Esto permite aceptar la hipótesis de que el entorno físico del centro de salud también está asociado de manera significativa con el nivel de satisfacción reportado por los usuarios.
+
 ```{r}
 # --- Tabla Detallada para la Hipótesis Específica 3 ---
 tibble(
@@ -1093,8 +912,7 @@ knitr::kable(
   align = "lccccc"
 ) %>%
 kableExtra::kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE) %>%
-kableExtra::footnote(general = "Un valor p < 0.05 indica una correlación estadísticamente significativa.",
-                     threeparttable = TRUE)
+kableExtra::footnote(general = "Un valor p < 0.05 indica una correlación estadísticamente significativa.", threeparttable = TRUE)
 ```
 
 
